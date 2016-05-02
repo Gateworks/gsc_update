@@ -7,7 +7,6 @@ all: gsc_update
 
 gsc_update: gsc_update.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
-	$(STRIP) $@
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $^ -o $@
