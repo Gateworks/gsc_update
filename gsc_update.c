@@ -352,7 +352,7 @@ int calc_crc(struct eeprom_layout *layout, unsigned char data[16][16384], unsign
 	  0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
  	  0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400 
 	};
-	unsigned int addr;
+	int addr;
 	unsigned short crc = 0;
 	unsigned short r;
 	int i,j;
@@ -435,7 +435,7 @@ struct eeprom_layout *parse_data_file(char *filename, unsigned char data[16][163
 	}
 
 	/* Verify we match a known FLASH layout and have the 2 segments */
-	for (i = 0; i < sizeof(layouts)/sizeof(layouts[0]); i++) {
+	for (i = 0; i < (int)(sizeof(layouts)/sizeof(layouts[0])); i++) {
 		if (layouts[i].start == address[0] &&
 		    layouts[i].start + 0x400 == address[1])
 		{
