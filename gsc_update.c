@@ -17,7 +17,7 @@
 #include "i2c.h"
 #include "i2c_upgrader.h"
 
-#define GSC_UPDATER_REV "1.5"
+#define GSC_UPDATER_REV "1.6"
 
 #define GSC_DEVICE		0x20
 #define GSC_UPDATER		0x21
@@ -52,6 +52,13 @@ struct eeprom_layout layouts[] = {
 	{
 		.name         = "GSC v2",
 		.start        = 0xc000,
+		.end          = 0xffff,
+		.eeprom_start = 0xf800,
+		.eeprom_end   = 0xfdff,
+	},
+	{
+		.name         = "GSC v3",
+		.start        = 0x8000,
 		.end          = 0xffff,
 		.eeprom_start = 0xf800,
 		.eeprom_end   = 0xfdff,
