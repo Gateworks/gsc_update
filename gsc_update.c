@@ -83,7 +83,6 @@ void print_help(void)
 	printf("\t-c,--crc <filename>     Show CRC of [filename] without programming flash\n");
 	printf("\t-v,--verbose            Increase Verbosity\n");
 	printf("\t-q,--quiet              do not display progress\n");
-	printf("\t-v,--verbose            Increase Verbosity\n");
 	printf("\n");
 }
 
