@@ -356,7 +356,7 @@ int calc_crc(struct eeprom_layout *layout, unsigned char data[16][16384], unsign
 {
 	const unsigned short crc_16_table[16] = {
 	  0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
- 	  0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400 
+	  0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400
 	};
 	int addr;
 	unsigned short crc = 0;
@@ -368,7 +368,7 @@ int calc_crc(struct eeprom_layout *layout, unsigned char data[16][16384], unsign
 		if (length[i]) {
 			int segaddr = (unsigned short) address[i];
 
-			// loop over blank gap 
+			// loop over blank gap
 			for (; addr < segaddr; addr++) {
 				if (addr >= (layout->end+1))
 					continue;
@@ -389,7 +389,7 @@ int calc_crc(struct eeprom_layout *layout, unsigned char data[16][16384], unsign
 					continue;
 				r = crc_16_table[crc & 0xf];
 				crc = (crc >> 4) & 0x0fff;
-				crc = crc ^ r ^ crc_16_table[data[i][j] & 0xf];			
+				crc = crc ^ r ^ crc_16_table[data[i][j] & 0xf];
 				r = crc_16_table[crc & 0xf];
 				crc = (crc >> 4) & 0x0fff;
 				crc = crc ^ r ^ crc_16_table[(data[i][j] >> 4) & 0xf];
@@ -424,7 +424,7 @@ struct eeprom_layout *parse_data_file(char *filename, unsigned char data[16][163
 		if (linenum == 1 && line[0] != '@') {
 			fprintf(stderr, "Invalid GSC firmware file\n");
 			return NULL;
-		} 
+		}
 		if (line[0] == '@' && address_loc < 16) {
 			j = 0;
 			address_loc++;
