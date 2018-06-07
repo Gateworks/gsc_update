@@ -267,7 +267,7 @@ int main(int argc, char **argv)
 					fflush(stdout);
 				}
 				if (!i && !quiet) {
-					printf("Program Upgrader  %2i%%\r", (int)((((double)j / 2) / i2c_upgrader_length[i]) * 100));
+					printf("Program Upgrader  %2i%%\r", j * 100 / i2c_upgrader.length[i]);
 					fflush(stdout);
 				}
 			}
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
 					fflush(stdout);
 				}
 				if (!quiet) {
-					printf("MSP Prg B%i   %2i%%\r", i, (int)((((double)j / 2) / length[i]) * 100));
+					printf("MSP Prg B%i   %2i%%\r", i, j  * 100 / length[i]);
 					fflush(stdout);
 				}
 			}
