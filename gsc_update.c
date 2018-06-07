@@ -21,17 +21,21 @@
 
 #define GSC_DEVICE		0x20
 #define GSC_UPDATER		0x21
-#define GSC_PASSWORD 	0x58
-#define GSC_UNLOCK 		0x01
-#define GSC_PROGRAM 	0x02
-#define GSC_ERASE 		0x04
-#define GSC_PUC 			0x06
+#define GSC_PASSWORD	0x58
+#define GSC_UNLOCK		0x01
+#define GSC_PROGRAM		0x02
+#define GSC_ERASE		0x04
+#define GSC_PUC			0x06
 
-#define GSC2_PUC			0x1
-#define GSC2_ADDR			0x2
-#define GSC2_ERASE		0x3
-#define GSC2_WORD			0x4
-#define GSC2_PROG			0x5
+#define GSC2_PUC		0x01
+#define GSC2_ADDR		0x02
+#define GSC2_ERASE		0x03
+#define GSC2_WORD		0x04
+#define GSC2_PROG		0x05
+
+#define ROM_MAIN_OFFSET	0x400
+#define FLASH           0
+#define FRAM            1
 
 struct eeprom_layout {
 	const char* name;
@@ -168,12 +172,12 @@ int main(int argc, char **argv)
 				printf("\t0x%04x:%05d(%04x) bytes",
 				       address[i], length[i], length[i]);
 			}
-			if (address[i] == layout->start + 0x400) {
+			if (address[i] == layout->start + ROM_MAIN_OFFSET) {
 				printf(" (%d unused)", (layout->eeprom_start
 				       - address[i]) - length[i]);
 			}
 			else if (address[i] == layout->start) {
-				printf(" (%d unused)", 0x400 - length[i]);
+				printf(" (%d unused)", ROM_MAIN_OFFSET - length[i]);
 			}
 			printf("\n");
 		}
@@ -226,7 +230,7 @@ int main(int argc, char **argv)
 
 	/* ##### Stage 1 Upgrader ##### */
 	// Erase main app
-	for (i = layout->start + 0x400; i < layout->end; i += 0x200) {
+	for (i = layout->start + ROM_MAIN_OFFSET; i < layout->end; i += 0x200) {
 		if (i >= layout->eeprom_start && i <= layout->eeprom_end)
 			continue;
 		buffer[0] = i & 0xff;
@@ -443,7 +447,7 @@ struct eeprom_layout *parse_data_file(char *filename, unsigned char data[16][163
 	/* Verify we match a known FLASH layout and have the 2 segments */
 	for (i = 0; i < (int)(sizeof(layouts)/sizeof(layouts[0])); i++) {
 		if (layouts[i].start == address[0] &&
-		    layouts[i].start + 0x400 == address[1])
+		    layouts[i].start + ROM_MAIN_OFFSET == address[1])
 		{
 			return(&layouts[i]);
 		}
