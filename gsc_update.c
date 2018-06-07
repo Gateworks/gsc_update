@@ -15,7 +15,8 @@
 #include <getopt.h>
 
 #include "i2c.h"
-#include "i2c_upgrader.h"
+#include "i2c_upgrader_flash.h"
+#include "i2c_upgrader_fram.h"
 
 #define GSC_UPDATER_REV "1.6"
 
@@ -43,6 +44,13 @@ struct eeprom_layout {
 	int end;
 	int eeprom_start;
 	int eeprom_end;
+	int flash_type;
+};
+
+struct i2c_upgrader {
+	unsigned short *address;
+	unsigned short *length;
+	unsigned char **data;
 };
 
 struct eeprom_layout layouts[] = {
@@ -52,6 +60,7 @@ struct eeprom_layout layouts[] = {
 		.end          = 0xffff,
 		.eeprom_start = 0xfc00,
 		.eeprom_end   = 0xfdff,
+		.flash_type   = FLASH,
 	},
 	{
 		.name         = "GSC v2",
@@ -59,6 +68,7 @@ struct eeprom_layout layouts[] = {
 		.end          = 0xffff,
 		.eeprom_start = 0xf800,
 		.eeprom_end   = 0xfdff,
+		.flash_type   = FLASH,
 	},
 	{
 		.name         = "GSC v3",
@@ -66,6 +76,7 @@ struct eeprom_layout layouts[] = {
 		.end          = 0xffff,
 		.eeprom_start = 0xf800,
 		.eeprom_end   = 0xfdff,
+		.flash_type   = FRAM,
 	},
 };
 
@@ -110,6 +121,8 @@ int main(int argc, char **argv)
 	unsigned char verbose = 0;
 	unsigned char quiet = 0;
 	char device[16];
+
+	struct i2c_upgrader i2c_upgrader;
 
 	int i, j;
 	int file;
@@ -228,36 +241,48 @@ int main(int argc, char **argv)
 	i2c_smbus_write_byte_data(file, 0, GSC_PASSWORD | GSC_UNLOCK);
 	ret = i2c_smbus_read_byte_data(file, 0);
 
+	if (layout->flash_type == FLASH) {
+		i2c_upgrader.address = i2c_upgrader_address_flash;
+		i2c_upgrader.length = i2c_upgrader_length_flash;
+		i2c_upgrader.data = (unsigned char **)i2c_upgrader_data_flash;
+	}
+	else if (layout->flash_type == FRAM) {
+		i2c_upgrader.address = i2c_upgrader_address_fram;
+		i2c_upgrader.length = i2c_upgrader_length_fram;
+		i2c_upgrader.data = (unsigned char **)i2c_upgrader_data_fram;
+	}
+
 	/* ##### Stage 1 Upgrader ##### */
-	// Erase main app
-	for (i = layout->start + ROM_MAIN_OFFSET; i < layout->end; i += 0x200) {
-		if (i >= layout->eeprom_start && i <= layout->eeprom_end)
-			continue;
-		buffer[0] = i & 0xff;
-		buffer[1] = (i >> 8) & 0xff;
-		i2c_smbus_write_i2c_block_data(file, 1, 2, buffer);
-		i2c_smbus_write_byte_data(file, 0, GSC_PASSWORD | GSC_ERASE);
-		while (1) {
-			ret = i2c_smbus_read_byte_data(file, 2);
-			if (ret != -1)
-				break;
-			fflush(stdout);
+	if (layout->flash_type == FLASH) {
+		for (i = layout->start + ROM_MAIN_OFFSET; i < layout->end; i += 0x200) {
+			if (i >= layout->eeprom_start && i <= layout->eeprom_end)
+				continue;
+			buffer[0] = i & 0xff;
+			buffer[1] = (i >> 8) & 0xff;
+			i2c_smbus_write_i2c_block_data(file, 1, 2, buffer);
+			i2c_smbus_write_byte_data(file, 0, GSC_PASSWORD | GSC_ERASE);
+			while (1) {
+				ret = i2c_smbus_read_byte_data(file, 2);
+				if (ret != -1)
+					break;
+				fflush(stdout);
+			}
+			ret = i2c_smbus_read_byte_data(file, 1);
 		}
-		ret = i2c_smbus_read_byte_data(file, 1);
 	}
 
 	// Switch to Programing mode
 	i2c_smbus_write_byte_data(file, 0, GSC_PASSWORD | GSC_PROGRAM);
 
 	for (i = 1; i>= 0; i--) {
-		if (i2c_upgrader_length[i]) {
-			for (j = 0; j < i2c_upgrader_length[i]; j+=2) {
+		if (i2c_upgrader.length[i]) {
+			for (j = 0; j < i2c_upgrader.length[i]; j+=2) {
 				// Set starting Address
-				buffer[0] = (i2c_upgrader_address[i] + j) & 0xff;
-				buffer[1] = ((i2c_upgrader_address[i] + j) >> 8) & 0xff;
+				buffer[0] = (i2c_upgrader.address[i] + j) & 0xff;
+				buffer[1] = ((i2c_upgrader.address[i] + j) >> 8) & 0xff;
 				i2c_smbus_write_i2c_block_data(file, 1, 2, buffer);
-				buffer[0] = i2c_upgrader_data[i][j];
-				buffer[1] = i2c_upgrader_data[i][j+1];
+				buffer[0] = ((char *)i2c_upgrader.data + i*1024)[j];
+				buffer[1] = ((char *)i2c_upgrader.data + i*1024)[j+1];
 
 				i2c_smbus_write_i2c_block_data(file, 3, 2, buffer);
 				while (1) {
@@ -277,11 +302,11 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+
 	// Turn off Programing Mode
 	i2c_smbus_write_byte_data(file, 0, GSC_PASSWORD | GSC_UNLOCK);
 	// Reset GSC
 	i2c_smbus_write_byte_data(file, 0, GSC_PASSWORD | GSC_PUC);
-
 
 	/* ##### Stage 2 Upgrader ##### */
 	while (1) {
@@ -289,7 +314,6 @@ int main(int argc, char **argv)
 		if (ret != -1)
 			break;
 	}
-
 	// Erase all of main flash
 	for (i = layout->start; i < layout->end; i += 0x200) {
 		if (i >= layout->eeprom_start && i <= layout->eeprom_end)
@@ -306,7 +330,7 @@ int main(int argc, char **argv)
 	}
 
 	/* program new segments */
-	for (i = 15; i>= 0; i--) {
+	for (i = 0; i<= 15; ++i) {
 		if (length[i]) {
 			for (j = 0; j < length[i]; j+=2) {
 				// Set starting Address

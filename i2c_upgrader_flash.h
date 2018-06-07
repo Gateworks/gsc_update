@@ -1,5 +1,5 @@
-unsigned short i2c_upgrader_address[2] = {0xE552, 0xFFFE};
-unsigned char i2c_upgrader_data[2][1024] = {
+unsigned short i2c_upgrader_address_flash[2] = {0xE552, 0xFFFE};
+unsigned char i2c_upgrader_data_flash[2][1024] = {
 	{
 		0x31,0x40,0x00,0x04,0xB0,0x12,0x5E,0xE5,0xB0,0x12,0x84,0xE7,0xB2,0x40,0x80,0x5A,
 		0x20,0x01,0xF2,0x40,0x0D,0x00,0x57,0x00,0xD2,0x42,0xFB,0x10,0x57,0x00,0xD2,0x42,
@@ -41,8 +41,7 @@ unsigned char i2c_upgrader_data[2][1024] = {
 		0x52,0xE5
 	}
 };
-
-unsigned short i2c_upgrader_length[2] = { 572, 2};
+unsigned short i2c_upgrader_length_flash[2] = { 572, 2};
 #if 0
 @E552
 31 40 00 04 B0 12 5E E5 B0 12 84 E7 B2 40 80 5A
@@ -80,8 +79,9 @@ FB 10 57 00 D2 42 FA 10 56 00 00 46 30 41 D2 B3
 20 00 FD 2F E2 D3 22 00 D2 B3 20 00 FD 2B D2 B3
 20 00 FD 2F E2 C3 22 00 00 46 30 41 F2 40 0D 00
 57 00 D2 42 FF 10 57 00 D2 42 FE 10 56 00 00 46
-30 41 30 40 88 E7 30 40 8C E7 FF 3F 
+30 41 30 40 88 E7 30 40 8C E7 FF 3F
 @FFFE
-52 E5 
+52 E5
 q
 #endif
+
