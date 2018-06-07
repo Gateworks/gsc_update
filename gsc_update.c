@@ -214,9 +214,9 @@ int main(int argc, char **argv)
 
 	/* read/show current firmware CRC and version */
 	ret = i2c_smbus_read_byte_data(file, 12);
-	crc = ret;
+	crc = ret & 0xff;
 	ret = i2c_smbus_read_byte_data(file, 13);
-	crc |= ret << 8;
+	crc |= (ret & 0xff) << 8;
 	ret = i2c_smbus_read_byte_data(file, 14);
 	printf("Current GSC Firmware Rev: %i (crc=0x%04x)\n", ret & 0xff, crc);
 
