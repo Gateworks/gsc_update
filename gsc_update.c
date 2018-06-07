@@ -344,7 +344,12 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	i2c_smbus_write_byte(file, 1);
-	ret = i2c_smbus_read_byte_data(file, 1);
+
+	while (1) {
+		ret = i2c_smbus_read_byte_data(file, 1);
+		if (ret != -1)
+			break;
+	}
 	printf("R1:0x%02x\n", ret);
 	if (ret & 1<<6) {
 		printf("stopping boot watchdog timer\n");
