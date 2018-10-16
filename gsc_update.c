@@ -96,6 +96,7 @@ void print_help(void)
 	printf("\nUsage:\n");
 	printf("\t-f,--flash <filename>   Program flash device using [filename]\n");
 	printf("\t-c,--crc <filename>     Show CRC of [filename] without programming flash\n");
+	printf("\t-g,--get_crc            Show CRC of currently installed firmware without programming flash\n");
 	printf("\t-v,--verbose            Increase Verbosity\n");
 	printf("\t-q,--quiet              do not display progress\n");
 	printf("\n");
@@ -103,7 +104,7 @@ void print_help(void)
 
 int main(int argc, char **argv)
 {
-	struct eeprom_layout *layout;
+	struct eeprom_layout *layout = 0;
 	unsigned long funcs;
 	unsigned char data[16][16384];
 	unsigned short address[16];
@@ -117,6 +118,7 @@ int main(int argc, char **argv)
 	unsigned char i2cbus = 0;
 #endif
 	unsigned char calc_crc_only = 0;
+	unsigned char get_crc_only = 0;
 	unsigned short crc;
 	unsigned char verbose = 0;
 	unsigned char quiet = 0;
@@ -133,12 +135,13 @@ int main(int argc, char **argv)
 		static struct option long_options[] = {
 			{"flash", 1, 0, 'f'},
 			{"crc", 1, 0, 'c'},
+			{"get_crc", 0, 0, 'g'},
 			{"verbose", 0, 0, 'v'},
 			{"quiet", 0, 0, 'q'},
 			{0, 0, 0, 0}
 		};
 
-		c = getopt_long(argc, argv, "f:c:vqh?", long_options, &optind);
+		c = getopt_long(argc, argv, "f:c:gvqh?", long_options, &optind);
 		if (c == -1)
 			break;
 
@@ -149,6 +152,9 @@ int main(int argc, char **argv)
 			case 'c':
 				prog_filename = optarg;
 				calc_crc_only = 1;
+				break;
+			case 'g':
+				get_crc_only = 1;
 				break;
 			case 'q':
 				quiet++;
@@ -163,44 +169,46 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!prog_filename) {
+	if (!prog_filename && !get_crc_only) {
 		print_help();
 		exit(-1);
 	}
 
 	print_banner();
 
-	/* parse and validate file */
-	layout = parse_data_file(prog_filename, data, address, length);
-	if (!layout) {
-		exit(2);
-	}
-
-	/* display info about memory segments */
-	if (verbose) {
-		j = 0;
-		printf("Segments:\n");
-		for(i=0;i<16 && length[i];i++) {
-			if (length[i]) {
-				printf("\t0x%04x:%05d(%04x) bytes",
-				       address[i], length[i], length[i]);
-			}
-			if (address[i] == layout->start + ROM_MAIN_OFFSET) {
-				printf(" (%d unused)", (layout->eeprom_start
-				       - address[i]) - length[i]);
-			}
-			else if (address[i] == layout->start) {
-				printf(" (%d unused)", ROM_MAIN_OFFSET - length[i]);
-			}
-			printf("\n");
+	if (!get_crc_only) {
+		/* parse and validate file */
+		layout = parse_data_file(prog_filename, data, address, length);
+		if (!layout) {
+			exit(2);
 		}
-	}
 
-	/* calculate CRC over parsed file */
-	crc = calc_crc(layout, data, address, length);
-	printf("%s: %s crc=0x%04x\n", layout->name, prog_filename, crc);
-	if (calc_crc_only) {
-		return 0;
+		/* display info about memory segments */
+		if (verbose) {
+			j = 0;
+			printf("Segments:\n");
+			for(i=0;i<16 && length[i];i++) {
+				if (length[i]) {
+					printf("\t0x%04x:%05d(%04x) bytes",
+					       address[i], length[i], length[i]);
+				}
+				if (address[i] == layout->start + ROM_MAIN_OFFSET) {
+					printf(" (%d unused)", (layout->eeprom_start
+					       - address[i]) - length[i]);
+				}
+				else if (address[i] == layout->start) {
+					printf(" (%d unused)", ROM_MAIN_OFFSET - length[i]);
+				}
+				printf("\n");
+			}
+		}
+
+		/* calculate CRC over parsed file */
+		crc = calc_crc(layout, data, address, length);
+		printf("%s: %s crc=0x%04x\n", layout->name, prog_filename, crc);
+		if (calc_crc_only) {
+			return 0;
+		}
 	}
 
 	sprintf(device, "/dev/i2c-%d", i2cbus);
@@ -232,6 +240,9 @@ int main(int argc, char **argv)
 	crc |= (ret & 0xff) << 8;
 	ret = i2c_smbus_read_byte_data(file, 14);
 	printf("Current GSC Firmware Rev: %i (crc=0x%04x)\n", ret & 0xff, crc);
+	if (get_crc_only) {
+		return 0;
+	}
 
 	/* set slave device to GSC update addr and unlock the GSC for programming */
 	if (ioctl(file, I2C_SLAVE_FORCE, GSC_UPDATER) < 0) {
@@ -339,7 +350,6 @@ int main(int argc, char **argv)
 				i2c_smbus_write_i2c_block_data(file, GSC2_ADDR, 2, buffer);
 				buffer[0] = data[i][j];
 				buffer[1] = data[i][j+1];
-
 				i2c_smbus_write_i2c_block_data(file, GSC2_WORD, 2, buffer);
 				i2c_smbus_write_byte(file, GSC2_PROG);
 				while (1) {
